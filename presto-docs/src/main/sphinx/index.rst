@@ -9,6 +9,7 @@ Presto Documentation
     overview
     installation
     admin
+    sandbox-vms
     connector
     security
     functions
