@@ -158,6 +158,13 @@ import static java.util.stream.Collectors.toList;
 class AstBuilder
         extends SqlBaseBaseVisitor<Node>
 {
+    private final ParsingOptions parsingOptions;
+
+    AstBuilder(ParsingOptions parsingOptions)
+    {
+        this.parsingOptions = requireNonNull(parsingOptions, "parsingOptions is null");
+    }
+
     @Override
     public Node visitSingleStatement(SqlBaseParser.SingleStatementContext context)
     {
@@ -1301,7 +1308,12 @@ class AstBuilder
     @Override
     public Node visitDecimalLiteral(SqlBaseParser.DecimalLiteralContext context)
     {
-        return new DecimalLiteral(getLocation(context), context.getText());
+        if (parsingOptions.isParseDecimalLiteralsAsDouble()) {
+            return new DoubleLiteral(getLocation(context), context.getText());
+        }
+        else {
+            return new DecimalLiteral(getLocation(context), context.getText());
+        }
     }
 
     @Override
