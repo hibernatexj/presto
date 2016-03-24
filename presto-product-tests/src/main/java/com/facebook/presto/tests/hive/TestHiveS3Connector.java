@@ -165,7 +165,7 @@ public class TestHiveS3Connector
                         parseTimestampInUTC("2015-05-10 12:15:35.123"),
                         "ala ma kota",
                         "ala ma kot",
-                        "ala ma", // The parquet reader treats all strings the same, so this doesn't get padded to 10
+                        "ala ma    ",
                         true
                 )
         );
@@ -184,9 +184,9 @@ public class TestHiveS3Connector
     private void assertProperAllDatatypesSchema(String tableName)
     {
         assertThat(query("SHOW COLUMNS FROM " + tableName, QueryType.SELECT).project(1, 2)).containsExactly(
-                row("c_tinyint", "bigint"),
-                row("c_smallint", "bigint"),
-                row("c_int", "bigint"),
+                row("c_tinyint", "tinyint"),
+                row("c_smallint", "smallint"),
+                row("c_int", "integer"),
                 row("c_bigint", "bigint"),
                 row("c_float", "double"),
                 row("c_double", "double"),
@@ -196,7 +196,7 @@ public class TestHiveS3Connector
                 row("c_date", "date"),
                 row("c_string", "varchar"),
                 row("c_varchar", "varchar(10)"),
-                row("c_char", "varchar(10)"),
+                row("c_char", "char(10)"),
                 row("c_boolean", "boolean"),
                 row("c_binary", "varbinary")
         );
@@ -205,16 +205,16 @@ public class TestHiveS3Connector
     private void assertProperParquetDatatypesSchema(String tableName)
     {
         assertThat(query("SHOW COLUMNS FROM " + tableName, QueryType.SELECT).project(1, 2)).containsExactly(
-                row("c_tinyint", "bigint"),
-                row("c_smallint", "bigint"),
-                row("c_int", "bigint"),
+                row("c_tinyint", "tinyint"),
+                row("c_smallint", "smallint"),
+                row("c_int", "integer"),
                 row("c_bigint", "bigint"),
                 row("c_float", "double"),
                 row("c_double", "double"),
                 row("c_timestamp", "timestamp"),
                 row("c_string", "varchar"),
                 row("c_varchar", "varchar(10)"),
-                row("c_char", "varchar(10)"),
+                row("c_char", "char(10)"),
                 row("c_boolean", "boolean")
         );
     }
