@@ -14,6 +14,7 @@ Presto Documentation
 
     overview
     installation
+    aws
     admin
     sandbox-vms
     connector
