@@ -447,12 +447,28 @@ public final class MathFunctions
         return Double.NaN;
     }
 
+    @Description("constant representing not-a-number in 32b float")
+    @ScalarFunction("fnan")
+    @SqlType(StandardTypes.FLOAT)
+    public static long floatNaN() // this should be removed once double -> float coersion is ready
+    {
+        return Float.floatToRawIntBits(Float.NaN);
+    }
+
     @Description("Infinity")
     @ScalarFunction
     @SqlType(StandardTypes.DOUBLE)
     public static double infinity()
     {
         return Double.POSITIVE_INFINITY;
+    }
+
+    @Description("Infinity in 32b float")
+    @ScalarFunction("finfinity")
+    @SqlType(StandardTypes.FLOAT)
+    public static long floatInfinity() // this should be removed once double -> float coersion is ready
+    {
+        return Float.floatToIntBits(Float.POSITIVE_INFINITY);
     }
 
     @Description("convert a number to a string in the given base")
