@@ -86,14 +86,17 @@ tests and exclude the ``quarantine`` and ``big_query`` groups run the
 following command:
 
     ```
-    presto-product-tests/bin/run_on_docker.sh <profile> -x quarantine,big_query
+    presto-product-tests/bin/run_on_docker.sh <profile> -x quarantine,big_query,mysql_connector,postgresql_connector
     ```
 
-where <profile> is one of either:
-- **distributed** - pseudo-distributed Hadoop installation running on a
+where ``<profile>`` is one of either:
+- **multinode** - pseudo-distributed Hadoop installation running on a
  single Docker container and a distributed Presto installation running on
  multiple Docker containers.
-- **singlenode** - pseudo-distributed Hadoop installation running on a
+- **singlenode** - pseudo-distributed kerberized Hadoop installation running on a
+ single Docker container and a single node installation of kerberized Presto also running
+ on a single Docker container.
+- **singlenode-kerberized** - pseudo-distributed Hadoop installation running on a
  single Docker container and a single node installation of Presto also running
  on a single Docker container.
 
@@ -214,8 +217,8 @@ breakpoint is hit.
 ## Troubleshooting
 
 Use the ``docker-compose`` and ``docker`` utilities to control and troubleshoot
-containers. In the following examples ``<profile>`` is either ``singlenode`` or
-``distributed``.
+containers. In the following examples ``<profile>`` is either ``singlenode``, ``multinode`` or
+``singlenode-kerberized``.
 
 1. Use the following command to view output from running containers:
 
