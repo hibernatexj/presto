@@ -219,7 +219,8 @@ public final class DoubleOperators
     }
 
     @ScalarOperator(CAST)
-    @SqlType(StandardTypes.VARCHAR)
+    @LiteralParameters("x")
+    @SqlType("varchar(x)")
     public static Slice castToVarchar(@SqlType(StandardTypes.DOUBLE) double value)
     {
         return utf8Slice(valueOf(value));

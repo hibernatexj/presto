@@ -222,7 +222,8 @@ public final class IntegerOperators
     }
 
     @ScalarOperator(CAST)
-    @SqlType(StandardTypes.VARCHAR)
+    @LiteralParameters("x")
+    @SqlType("varchar(x)")
     public static Slice castToVarchar(@SqlType(StandardTypes.INTEGER) long value)
     {
         // todo optimize me
