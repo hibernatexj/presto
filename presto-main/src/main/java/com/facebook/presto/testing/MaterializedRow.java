@@ -54,7 +54,7 @@ public class MaterializedRow
     {
         checkArgument(!(value instanceof Short || value instanceof Byte), "SMALLINT and TINYINT are not yet supported");
         if (value instanceof Double || value instanceof Float) {
-            return new ApproximateDouble(((Number) value).doubleValue(), precision);
+            return new ApproximateDouble(((Number) value), precision);
         }
         if (value instanceof List) {
             return ((List<?>) value).stream()
@@ -142,21 +142,45 @@ public class MaterializedRow
 
     private static class ApproximateDouble
     {
-        private final Double value;
-        private final Double normalizedValue;
+        private final Number value;
+        private final Number normalizedValue;
 
-        private ApproximateDouble(Double value, int precision)
+        private ApproximateDouble(Number value, int precision)
         {
+            checkArgument(value instanceof Float || value instanceof Double, "Only floating point values accepted");
             this.value = value;
-            if (value.isNaN() || value.isInfinite()) {
-                this.normalizedValue = value;
+            if (value instanceof Float) {
+                normalizedValue = normalizeFloat((Float) value, precision);
+            }
+            else if (value instanceof Double) {
+                normalizedValue = normalizeDouble((Double) value, precision);
             }
             else {
-                this.normalizedValue = new BigDecimal(value).round(new MathContext(precision)).doubleValue();
+                throw new IllegalStateException("unreachable"); // to silence "uninitialized" error for normalizedValue
             }
         }
 
-        public Double getValue()
+        private static Float normalizeFloat(Float value, int precision)
+        {
+            if (value.isNaN() || value.isInfinite()) {
+                return value;
+            }
+            else {
+                return new BigDecimal(value).round(new MathContext(precision)).floatValue();
+            }
+        }
+
+        private static Double normalizeDouble(Double value, int precision)
+        {
+            if (value.isNaN() || value.isInfinite()) {
+                return value;
+            }
+            else {
+                return new BigDecimal(value).round(new MathContext(precision)).doubleValue();
+            }
+        }
+
+        public Number getValue()
         {
             return value;
         }
