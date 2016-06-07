@@ -22,15 +22,19 @@ import com.teradata.tempto.RequirementsProvider;
 import com.teradata.tempto.Requires;
 import com.teradata.tempto.configuration.Configuration;
 import com.teradata.tempto.query.QueryResult;
+import org.slf4j.LoggerFactory;
 import org.testng.annotations.Test;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 import static com.facebook.presto.tests.TestGroups.JDBC;
 import static com.facebook.presto.tests.TestGroups.QUARANTINE;
+import static com.facebook.presto.tests.TestGroups.SIMBA_JDBC;
 import static com.facebook.presto.tests.TpchTableResults.PRESTO_NATION_RESULT;
 import static com.facebook.presto.tests.utils.JdbcDriverUtils.getSessionProperty;
 import static com.facebook.presto.tests.utils.JdbcDriverUtils.resetSessionProperty;
@@ -57,6 +61,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class JdbcTests
         extends ProductTest
 {
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(JdbcTests.class);
     private static final String TABLE_NAME = "nation_table_name";
 
     private static class ImmutableAndMutableNationTable
@@ -130,6 +135,9 @@ public class JdbcTests
                 assertThat(result).contains(row(timeZoneId));
             }
         }
+        else {
+            LOGGER.warn("shouldSetTimezone() only applies to PrestoJdbcDriver");
+        }
     }
 
     @Test(groups = JDBC)
@@ -142,6 +150,9 @@ public class JdbcTests
                 QueryResult result = queryResult(statement, "SELECT date_format(TIMESTAMP '2001-01-09 09:04', '%M')");
                 assertThat(result).contains(row("一月"));
             }
+        }
+        else {
+            LOGGER.warn("shouldSetLocale() only applies to PrestoJdbcDriver");
         }
     }
 
@@ -228,6 +239,9 @@ public class JdbcTests
             assertThat(query("select {fn timestampadd(SQL_TSI_DAY, 21, date '2001-01-01')}")).containsExactly(row(Date.valueOf("2001-01-22")));
             assertThat(query("select {fn timestampdiff(SQL_TSI_DAY,date '2001-01-01',date '2002-01-01')}")).containsExactly(row(365));
             assertThat(query("select {fn ucase('ABC def 123')}")).containsExactly(row("ABC DEF 123"));
+        }
+        else {
+            LOGGER.warn("testSqlEscapeFunctions() only applies to TeradataJdbcDriver");
         }
     }
 
