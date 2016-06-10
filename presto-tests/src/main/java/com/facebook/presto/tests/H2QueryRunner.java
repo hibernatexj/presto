@@ -53,6 +53,7 @@ import static com.facebook.presto.spi.type.BooleanType.BOOLEAN;
 import static com.facebook.presto.spi.type.Chars.isCharType;
 import static com.facebook.presto.spi.type.DateType.DATE;
 import static com.facebook.presto.spi.type.DoubleType.DOUBLE;
+import static com.facebook.presto.spi.type.FloatType.FLOAT;
 import static com.facebook.presto.spi.type.IntegerType.INTEGER;
 import static com.facebook.presto.spi.type.SmallintType.SMALLINT;
 import static com.facebook.presto.spi.type.TimeType.TIME;
@@ -206,6 +207,15 @@ public class H2QueryRunner
                         }
                         else {
                             row.add(doubleValue);
+                        }
+                    }
+                    else if (FLOAT.equals(type)) {
+                        float floatValue = resultSet.getFloat(i);
+                        if (resultSet.wasNull()) {
+                            row.add(null);
+                        }
+                        else {
+                            row.add(floatValue);
                         }
                     }
                     else if (isVarcharType(type)) {
