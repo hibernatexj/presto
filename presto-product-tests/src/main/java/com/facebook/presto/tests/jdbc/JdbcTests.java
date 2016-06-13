@@ -49,6 +49,8 @@ import static com.teradata.tempto.fulfillment.table.hive.tpch.TpchTableDefinitio
 import static com.teradata.tempto.internal.convention.SqlResultDescriptor.sqlResultDescriptorForResource;
 import static com.teradata.tempto.query.QueryExecutor.defaultQueryExecutor;
 import static com.teradata.tempto.query.QueryExecutor.query;
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
 import static java.util.Locale.CHINESE;
 import static org.assertj.core.api.Assertions.assertThat;
 

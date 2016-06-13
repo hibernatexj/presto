@@ -13,30 +13,32 @@
  */
 package com.facebook.presto.tests.utils;
 
+import com.facebook.presto.jdbc.PrestoConnection;
+
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class JdbcDriverUtils
 {
     public static String getSessionProperty(Connection connection, String key) throws SQLException
     {
-        try (Statement statement = connection.createStatement()) {
-            ResultSet rs = statement.executeQuery("SHOW SESSION");
-            while (rs.next()) {
-                if (rs.getString("Name").equals(key)) {
-                    return rs.getString("Value");
-                }
-            }
-        }
-        return null;
+        return getSessionProperty(connection, key, "Value");
     }
 
     public static String getSessionPropertyDefault(Connection connection, String key) throws SQLException
+    {
+        return getSessionProperty(connection, key, "Default");
+    }
+
+    private static String getSessionProperty(Connection connection, String key, String valueType) throws SQLException
     {
         try (Statement statement = connection.createStatement()) {
             ResultSet rs = statement.executeQuery("SHOW SESSION");
             while (rs.next()) {
                 if (rs.getString("Name").equals(key)) {
-                    return rs.getString("Default");
+                    return rs.getString(valueType);
                 }
             }
         }
