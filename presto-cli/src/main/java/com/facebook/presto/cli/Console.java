@@ -38,9 +38,13 @@ import org.fusesource.jansi.AnsiConsole;
 
 import javax.inject.Inject;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.ConnectException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -59,6 +63,7 @@ import static com.facebook.presto.client.ClientSession.withTransactionId;
 import static com.facebook.presto.sql.parser.StatementSplitter.Statement;
 import static com.facebook.presto.sql.parser.StatementSplitter.isEmptyStatement;
 import static com.facebook.presto.sql.parser.StatementSplitter.squeezeStatement;
+import static com.google.common.base.Throwables.getCausalChain;
 import static com.google.common.io.ByteStreams.nullOutputStream;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
@@ -322,11 +327,44 @@ public class Console
             queryRunner.setSession(session);
         }
         catch (RuntimeException e) {
-            System.err.println("Error running command: " + e.getMessage());
-            if (queryRunner.getSession().isDebug()) {
-                e.printStackTrace();
+            System.err.println(createErrorMessage(e, queryRunner.getSession()));
+        }
+    }
+
+    private static String createErrorMessage(Throwable throwable, ClientSession session)
+    {
+        StringBuilder builder = new StringBuilder();
+        if (getCausalChain(throwable).stream().anyMatch(x -> x instanceof EOFException || x instanceof ConnectException)) {
+            builder.append("There was a problem with a response from Presto Coordinator.\n");
+            builder.append("To solve this problem you may try to:\n");
+            builder.append(" * Verify that Presto is running on " + session.getServer() + "\n");
+            builder.append(" * Use '--server' argument when starting Presto CLI to define server host and port.\n");
+            builder.append(" * Check the network conditions between client and server.\n");
+            if (!session.isDebug()) {
+                builder.append(" * Use '--debug' argument to get more technical details.\n");
             }
         }
+        else {
+            builder.append("Error running command: " + throwable.getMessage() + "\n");
+        }
+
+        if (session.isDebug()) {
+            builder.append("\n=========   TECHNICAL DETAILS   =========\n");
+            builder.append("Error message:\n");
+            builder.append(throwable.getMessage() + "\n");
+            builder.append("Stack trace:\n");
+            builder.append(getStackTraceString(throwable));
+            builder.append("========= TECHNICAL DETAILS END =========\n\n");
+        }
+
+        return builder.toString();
+    }
+
+    private static String getStackTraceString(Throwable throwable)
+    {
+        StringWriter writer = new StringWriter();
+        throwable.printStackTrace(new PrintWriter(writer));
+        return writer.toString();
     }
 
     private static MemoryHistory getHistory()
