@@ -22,6 +22,8 @@ import org.testng.annotations.Test;
 
 import static com.facebook.presto.block.BlockAssertions.createDoubleSequenceBlock;
 import static com.facebook.presto.block.BlockAssertions.createDoublesBlock;
+import static com.facebook.presto.block.BlockAssertions.createFloatSequenceBlock;
+import static com.facebook.presto.block.BlockAssertions.createFloatsBlock;
 import static com.facebook.presto.block.BlockAssertions.createLongRepeatBlock;
 import static com.facebook.presto.block.BlockAssertions.createLongSequenceBlock;
 import static com.facebook.presto.block.BlockAssertions.createLongsBlock;
@@ -31,6 +33,11 @@ import static com.facebook.presto.operator.aggregation.ApproximateDoublePercenti
 import static com.facebook.presto.operator.aggregation.ApproximateDoublePercentileAggregations.DOUBLE_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION_WITH_ACCURACY;
 import static com.facebook.presto.operator.aggregation.ApproximateDoublePercentileArrayAggregations.DOUBLE_APPROXIMATE_PERCENTILE_ARRAY_AGGREGATION;
 import static com.facebook.presto.operator.aggregation.ApproximateDoublePercentileArrayAggregations.DOUBLE_APPROXIMATE_PERCENTILE_ARRAY_WEIGHTED_AGGREGATION;
+import static com.facebook.presto.operator.aggregation.ApproximateFloatPercentileAggregations.FLOAT_APPROXIMATE_PERCENTILE_AGGREGATION;
+import static com.facebook.presto.operator.aggregation.ApproximateFloatPercentileAggregations.FLOAT_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION;
+import static com.facebook.presto.operator.aggregation.ApproximateFloatPercentileAggregations.FLOAT_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION_WITH_ACCURACY;
+import static com.facebook.presto.operator.aggregation.ApproximateFloatPercentileArrayAggregations.FLOAT_APPROXIMATE_PERCENTILE_ARRAY_AGGREGATION;
+import static com.facebook.presto.operator.aggregation.ApproximateFloatPercentileArrayAggregations.FLOAT_APPROXIMATE_PERCENTILE_ARRAY_WEIGHTED_AGGREGATION;
 import static com.facebook.presto.operator.aggregation.ApproximateLongPercentileAggregations.LONG_APPROXIMATE_PERCENTILE_AGGREGATION;
 import static com.facebook.presto.operator.aggregation.ApproximateLongPercentileAggregations.LONG_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION;
 import static com.facebook.presto.operator.aggregation.ApproximateLongPercentileAggregations.LONG_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION_WITH_ACCURACY;
@@ -177,6 +184,149 @@ public class TestApproximatePercentileAggregation
                 1.0,
                 ImmutableList.of(1L, 2L),
                 createLongsBlock(1L, 2L, 3L),
+                createLongsBlock(4L, 2L, 1L),
+                createRLEBlock(ImmutableList.of(0.5, 0.8),  3));
+    }
+
+    @Test
+    public void testFloatPartialStep()
+            throws Exception
+    {
+        // regular approx_percentile
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_AGGREGATION,
+                1.0,
+                null,
+                createFloatsBlock(null, null),
+                createRLEBlock(0.5, 2));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_AGGREGATION,
+                1.0,
+                1.0f,
+                createFloatsBlock(null, 1.0f),
+                createRLEBlock(0.5, 2));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_AGGREGATION,
+                1.0,
+                2.0f,
+                createFloatsBlock(null, 1.0f, 2.0f, 3.0f),
+                createRLEBlock(0.5, 4));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_AGGREGATION,
+                1.0,
+                2.0f,
+                createFloatsBlock(1.0f, 2.0f, 3.0f),
+                createRLEBlock(0.5, 3));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_AGGREGATION,
+                1.0,
+                3.0f,
+                createFloatsBlock(1.0f, null, 2.0f, 2.0f, null, 2.0f, 2.0f, null, 2.0f, 2.0f, null, 3.0f, 3.0f, null, 3.0f, null, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f),
+                createRLEBlock(0.5, 21));
+
+        // array of approx_percentile
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_ARRAY_AGGREGATION,
+                1.0,
+                null,
+                createFloatsBlock(null, null),
+                createRLEBlock(ImmutableList.of(0.5),  2));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_ARRAY_AGGREGATION,
+                1.0,
+                null,
+                createFloatsBlock(null, null),
+                createRLEBlock(ImmutableList.of(0.5, 0.5),  2));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_ARRAY_AGGREGATION,
+                1.0,
+                ImmutableList.of(1.0f, 1.0f),
+                createFloatsBlock(null, 1.0f),
+                createRLEBlock(ImmutableList.of(0.5, 0.5),  2));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_ARRAY_AGGREGATION,
+                1.0,
+                ImmutableList.of(1.0f, 2.0f, 3.0f),
+                createFloatsBlock(null, 1.0f, 2.0f, 3.0f),
+                createRLEBlock(ImmutableList.of(0.2, 0.5, 0.8),  4));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_ARRAY_AGGREGATION,
+                1.0,
+                ImmutableList.of(2.0f, 3.0f),
+                createFloatsBlock(1.0f, 2.0f, 3.0f),
+                createRLEBlock(ImmutableList.of(0.5, 0.99),  3));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_ARRAY_AGGREGATION,
+                1.0,
+                ImmutableList.of(1.0f, 3.0f),
+                createFloatsBlock(1.0f, null, 2.0f, 2.0f, null, 2.0f, 2.0f, null, 2.0f, 2.0f, null, 3.0f, 3.0f, null, 3.0f, null, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f),
+                createRLEBlock(ImmutableList.of(0.01, 0.5),  21));
+
+        // weighted approx_percentile
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION,
+                1.0,
+                null,
+                createFloatsBlock(null, null),
+                createLongsBlock(1L, 1L),
+                createRLEBlock(0.5, 2));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION,
+                1.0,
+                1.0f,
+                createFloatsBlock(null, 1.0f),
+                createLongsBlock(1L, 1L),
+                createRLEBlock(0.5, 2));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION,
+                1.0,
+                2.0f,
+                createFloatsBlock(null, 1.0f, 2.0f, 3.0f),
+                createLongsBlock(1L, 1L, 1L, 1L),
+                createRLEBlock(0.5, 4));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION,
+                1.0,
+                2.0f,
+                createFloatsBlock(1.0f, 2.0f, 3.0f),
+                createLongsBlock(1L, 1L, 1L),
+                createRLEBlock(0.5, 3));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION,
+                1.0,
+                3.0f,
+                createFloatsBlock(1.0f, null, 2.0f, null, 2.0f, null, 2.0f, null, 3.0f, null, 3.0f, null, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f),
+                createLongsBlock(1L, 1L, 2L, 1L, 2L, 1L, 2L, 1L, 2L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                createRLEBlock(0.5, 17));
+
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_WEIGHTED_AGGREGATION_WITH_ACCURACY,
+                1.0,
+                9900.0f,
+                createFloatSequenceBlock(0, 10000),
+                createLongRepeatBlock(1, 10000),
+                createRLEBlock(0.99, 10000),
+                createRLEBlock(0.001, 10000));
+
+        // weighted + array of approx_percentile
+        assertAggregation(
+                FLOAT_APPROXIMATE_PERCENTILE_ARRAY_WEIGHTED_AGGREGATION,
+                1.0,
+                ImmutableList.of(1.0f, 2.0f),
+                createFloatsBlock(1.0f, 2.0f, 3.0f),
                 createLongsBlock(4L, 2L, 1L),
                 createRLEBlock(ImmutableList.of(0.5, 0.8),  3));
     }
