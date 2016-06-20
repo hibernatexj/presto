@@ -240,7 +240,7 @@ public final class HiveType
             if (varcharLength <= HiveVarchar.MAX_VARCHAR_LENGTH) {
                 return getVarcharTypeInfo(varcharLength);
             }
-            else if (varcharLength == VarcharType.MAX_LENGTH) {
+            else if (varcharType.isUnbounded()) {
                 return HIVE_STRING.typeInfo;
             }
             else {

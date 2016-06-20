@@ -20,7 +20,6 @@ import com.facebook.presto.spi.block.Block;
 import com.facebook.presto.spi.type.SqlDecimal;
 import com.facebook.presto.spi.type.StandardTypes;
 import com.facebook.presto.spi.type.Type;
-import com.facebook.presto.spi.type.VarcharType;
 import com.facebook.presto.type.JsonPathType;
 import com.facebook.presto.type.LiteralParameters;
 import com.facebook.presto.type.SqlType;
@@ -77,7 +76,7 @@ public final class JsonFunctions
     }
 
     @ScalarFunction
-    @SqlType(VarcharType.VARCHAR_UNBOUNDED)
+    @SqlType(StandardTypes.VARCHAR)
     public static Slice jsonFormat(@SqlType(StandardTypes.JSON) Slice slice)
     {
         return slice;
@@ -373,7 +372,7 @@ public final class JsonFunctions
     @ScalarFunction("json_extract_scalar")
     @LiteralParameters("x")
     @Nullable
-    @SqlType(VarcharType.VARCHAR_UNBOUNDED)
+    @SqlType(StandardTypes.VARCHAR)
     public static Slice varcharJsonExtractScalar(@SqlType("varchar(x)") Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
         return JsonExtract.extract(json, jsonPath.getScalarExtractor());
@@ -381,7 +380,7 @@ public final class JsonFunctions
 
     @ScalarFunction
     @Nullable
-    @SqlType(VarcharType.VARCHAR_UNBOUNDED)
+    @SqlType(StandardTypes.VARCHAR)
     public static Slice jsonExtractScalar(@SqlType(StandardTypes.JSON) Slice json, @SqlType(JsonPathType.NAME) JsonPath jsonPath)
     {
         return JsonExtract.extract(json, jsonPath.getScalarExtractor());
