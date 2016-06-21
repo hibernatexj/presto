@@ -32,6 +32,9 @@ Ambari Slider Views if you are planning to use HDP distribution.
 
   Please note that all example files refered in below section comes from:
   https://github.com/prestodb/presto-yarn/
+  
+  This document also assumes that you have the basic knowledge of Presto
+  and the configuration files/properties used by it.
 
 Pre-requisities
 ---------------
@@ -71,16 +74,16 @@ The steps for deploying Presto on Yarn via Slider views in Ambari are:
     YARN, Zookeeper is required for Slider to work. You must also also
     select Slider to be installed.
 
-6.  For the Slider client installed, you need to update the configuration if
+6.  For the Slider client installed, you need to update its configuration if
     you are not using the default installation paths for Hadoop and Zookeeper.
-    Thus slider-env.sh should point to your JAVA\_HOME and HADOOP\_CONF\_DIR
+    Thus ``slider-env.sh`` should point to your JAVA\_HOME and HADOOP\_CONF\_DIR
 
 ::
 
         export JAVA_HOME=/usr/lib/jvm/java
         export HADOOP_CONF_DIR=/etc/hadoop/conf
 
-7.  For zookeeper if you are using a different installation directory from the
+7.  For zookeeper, if you are using a different installation directory from the
     default one at ``/usr/lib/zookeeper`` add a custom property to ``slider-client`` section
     in Slider configuration with key: ``zk.home`` and value: ``path_to_your_zookeeper``.
     If using a different  port from default one ``2181`` then add key: ``slider.zookeeper.quorum``
@@ -106,12 +109,14 @@ The steps for deploying Presto on Yarn via Slider views in Ambari are:
     populated with the values you have in the ``*-default.json`` files in
     your ``presto-yarn-package-*.zip``.
 
-13. The app name should be of lower case, eg: presto1, and also set all
-    the configuration here as per your cluster requirement. See
-    `here <#presto-app-package-configuration>`__ for explanation on each configuration
-    variable.
+13. The app name should be of lower case, eg: presto1.
 
-14. Prepare HDFS for Slider. The user directory you create here should be
+14. You can set the configuration property fields as per your cluster requirement. For example,
+    if you want to set a connector for Presto, you can update the ``global.catalog`` property. See
+    `section <#presto-app-package-configuration>`__ for explanation on each configuration
+    property.
+
+15. Prepare HDFS for Slider. The user directory you create here should be
     for the same user you set in ``global.app_user`` field. If the
     ``app_user`` is going to be ``yarn`` then do:
 
@@ -120,10 +125,10 @@ The steps for deploying Presto on Yarn via Slider views in Ambari are:
     su hdfs hdfs dfs -mkdir -p /user/yarn 
     su hdfs hdfs dfs -chown yarn:yarn /user/yarn
 
-15. Make sure you change the ``global.presto_server_port`` from 8080 to
+16. Make sure you change the ``global.presto_server_port`` from 8080 to
     some other unused port eg;8089, since Ambari by default uses 8080.
 
-16. Make sure the data directory in the UI (added in
+17. Make sure the data directory in the UI (added in
     ``appConfig-default.json`` eg: ``/var/lib/presto/``) is pre-created
     on all nodes and the directory must be owned by ``global.app_user``,
     otherwise slider will fail to start Presto with permission errors.
@@ -133,14 +138,14 @@ The steps for deploying Presto on Yarn via Slider views in Ambari are:
     mkdir -p /var/lib/presto/data
     chown -R yarn:hadoop /var/lib/presto/data
 
-17. If you want to add any additional Custom properties, use Custom
+18. If you want to add any additional Custom properties, use Custom
     property section. Additional properties supported as of now are
     ``site.global.plugin``, ``site.global.additional_config_properties``
     and ``site.global.additional_node_properties``. See
-    `section <#presto-app-package-configuration>`__ above for requirements and format of
+    `section <#presto-app-package-configuration>`__ for requirements and format of
     these properties.
 
-18. Click Finish. This will basically do the equivalent of
+19. Click Finish. This will basically do the equivalent of
     ``package  --install`` and ``create`` you do via the bin/slider
     script. Once successfully deployed, you will see the Yarn application
     started for Presto. You can click on app launched, and then if monitor the 
@@ -148,10 +153,10 @@ The steps for deploying Presto on Yarn via Slider views in Ambari are:
     should take you to the YARN WebUI. If your application is successfully run, it 
     should continuously be available in the YARN resource manager as a "RUNNING" application.
 
-19. If the job fails, please be sure to check the job history’s logs along with the logs on the node’s disk. 
+20. If the job fails, please be sure to check the job history’s logs along with the logs on the node’s disk. 
     Refer `this <#debugging-and-logging>`__ section for more details.
 
-20. You can manage the application lifecycle (e.g. start, stop, flex,
+21. You can manage the application lifecycle (e.g. start, stop, flex,
     destroy) from the View UI.
 
 Reconfiguration in Slider View
@@ -232,7 +237,7 @@ section.
 This should start your application, and you can see it under the Yarn
 ResourceManager webUI.If your application is successfully run, it should continuously be available in the 
 YARN resource manager as a "RUNNING" application. If the job fails, please be sure to check the job history's logs 
-along with the logs on the node's disk (more information `below <#debugging-and-logging>`__).
+along with the logs on the node's disk (more information `here <#debugging-and-logging>`__).
 
 Additional Slider commands
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -338,7 +343,22 @@ There are some sample configuration options files available at
 ``presto-yarn-package/src/main/resources`` directory in the repository.
 ``appConfig.json`` and ``resources-[singlenode|mutlinode].json`` files
 are the two major configuration files you need to configure before you
-can get Presto running on YARN. Copy the
+can get Presto running on YARN. 
+
+``Note``: If you are using Ambari for your installation you can update
+the configuration properties from the Ambari Slider View UI. Changing these files manually is
+needed only if you are going to install Presto on YARN manually using
+Slider.
+
+The "default" values listed for the sections
+`appConfig.json <#appconfig-json>`__ and `resources.json <#resources-json>`__ are
+from ``presto-yarn-package/src/main/resources/appConfig.json`` and
+``presto-yarn-package/src/main/resources/resources-multinode.json``
+files respectively. These default values will be auto-populated on the Slider
+View UI for installation using `Ambari <#installation-using-ambari-slider-view>`__ Slider View.
+But you can modify the properties on the UI as per your requirements.
+
+For manual installation using Slider, copy the 
 ``presto-yarn-package/src/main/resources/appConfig.json`` and
 ``presto-yarn-package/src/main/resources/resources-[singlenode|multinode].json``
 to a local file at a location where you are planning to run Slider. Name
@@ -346,19 +366,6 @@ them as ``appConfig.json`` and ``resources.json``. Update these sample
 json files with whatever configurations you want to have for Presto. If
 you are ok with the default values in the sample file you can just use
 them as-is.
-
-The "default" values listed for the sections
-`appConfig.json <#appconfig-json>`__ and `resources.json <#resources-json>`__ are
-from ``presto-yarn-package/src/main/resources/appConfig.json`` and
-``presto-yarn-package/src/main/resources/resources-multinode.json``
-files respectively. These default values will also be used for
-installation using `Ambari <#installation-using-ambari-slider-view>`__ Slider View.
-
-``Note``: If you are planning to use Ambari for your installation skip
-to this `section <#installation-using-ambari-slider-view>`__. Changing these files manually is
-needed only if you are going to install Presto on YARN manually using
-Slider. If installing via Ambari, you can change these configurations
-from the Slider view.
 
 Follow the steps here and configure the presto-yarn configuration files
 to match your cluster requirements. Optional ones are marked (optional).
@@ -394,10 +401,10 @@ scripts(bin/slider) as user ``hdfs`` in this case.
 2. ``site.global.user_group`` (default - ``hadoop``): The group owning
    the application.
 
-3. ``site.global.data_dir`` (default - ``/var/lib/presto/data``): The
-   data directory configured should be pre-created on all nodes and must
-   be owned by user ``yarn``, otherwise slider will fail to start Presto
-   with permission errors.
+3. ``site.global.data_dir`` (default - ``/var/lib/presto/data``): This will
+   be the data directory used by Presto. This directory configured should 
+   be pre-created on all nodes and must be owned by user ``yarn``, 
+   otherwise slider will fail to start Presto with permission errors.
 
 ::
 
@@ -429,11 +436,16 @@ scripts(bin/slider) as user ``hdfs`` in this case.
    server's http port.
 
 9. ``site.global.catalog`` (optional) (default - configures ``tpch``
-   connector): It should be of the format (note the single quotes around
+   connector): This property is used to configure connectors for Presto.
+   The value of this should match the properties you would normally add
+   in a ``connector.properties`` file for Presto in a non-YARN based installation.
+   
+   It should be of the format (note the single quotes around
    each value) - {'connector1' : ['key1=value1', 'key2=value2'..],
    'connector2' : ['key1=value1', 'key2=value2'..]..}. This will create
    files connector1.properties, connector2.properties for Presto with
-   entries key1=value1 etc.
+   entries key1=value1 etc. 
+   For example to have hive.properties for CDH Hive:
 
 ::
 
