@@ -21,7 +21,7 @@ import com.facebook.presto.sql.planner.plan.ProjectNode;
 import com.facebook.presto.sql.tree.Expression;
 import com.facebook.presto.sql.tree.FunctionCall;
 import com.facebook.presto.sql.tree.QualifiedName;
-import com.facebook.presto.sql.tree.QualifiedNameReference;
+import com.facebook.presto.sql.tree.SymbolReference;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
@@ -151,14 +151,14 @@ public final class PlanMatchPattern
         ImmutableList.Builder<Expression> builder = ImmutableList.builder();
         for (String arg : args) {
             if (arg.equals("*")) {
-                builder.add(new PlanMatchPattern.AnyQualifiedNameReference());
+                builder.add(new PlanMatchPattern.AnySymbolReference());
             }
             else {
-                builder.add(new QualifiedNameReference(new QualifiedName(arg)));
+                builder.add(new SymbolReference(arg));
             }
         }
 
-        return new FunctionCall(new QualifiedName(name), builder.build());
+        return new FunctionCall(QualifiedName.of(name), builder.build());
     }
 
     @Override
@@ -193,11 +193,11 @@ public final class PlanMatchPattern
         return Strings.repeat("    ", indent);
     }
 
-    private static class AnyQualifiedNameReference extends QualifiedNameReference
+    private static class AnySymbolReference extends SymbolReference
     {
-        AnyQualifiedNameReference()
+        AnySymbolReference()
         {
-            super(new QualifiedName("*"));
+            super("*");
         }
 
         @Override
@@ -207,7 +207,7 @@ public final class PlanMatchPattern
                 return true;
             }
 
-            if (o == null || Expression.class.isInstance(o.getClass())) {
+            if (o == null || ! SymbolReference.class.isInstance(o)) {
                 return false;
             }
 
