@@ -33,6 +33,7 @@ import com.facebook.presto.operator.aggregation.CorrelationAggregation;
 import com.facebook.presto.operator.aggregation.CountAggregation;
 import com.facebook.presto.operator.aggregation.CountIfAggregation;
 import com.facebook.presto.operator.aggregation.CovarianceAggregation;
+import com.facebook.presto.operator.aggregation.DoubleHistogramAggregation;
 import com.facebook.presto.operator.aggregation.DoubleSumAggregation;
 import com.facebook.presto.operator.aggregation.FloatAverageAggregation;
 import com.facebook.presto.operator.aggregation.FloatGeometricMeanAggregations;
@@ -41,7 +42,6 @@ import com.facebook.presto.operator.aggregation.GeometricMeanAggregations;
 import com.facebook.presto.operator.aggregation.InternalAggregationFunction;
 import com.facebook.presto.operator.aggregation.LongSumAggregation;
 import com.facebook.presto.operator.aggregation.MergeHyperLogLogAggregation;
-import com.facebook.presto.operator.aggregation.NumericHistogramAggregation;
 import com.facebook.presto.operator.aggregation.RegressionAggregation;
 import com.facebook.presto.operator.aggregation.VarianceAggregation;
 import com.facebook.presto.operator.scalar.ArrayCardinalityFunction;
@@ -370,7 +370,7 @@ public class FunctionRegistry
                 .aggregate(ApproximateCountDistinctAggregations.class)
                 .aggregate(MergeHyperLogLogAggregation.class)
                 .aggregate(ApproximateSetAggregation.class)
-                .aggregate(NumericHistogramAggregation.class)
+                .aggregate(DoubleHistogramAggregation.class)
                 .aggregate(CovarianceAggregation.class)
                 .aggregate(RegressionAggregation.class)
                 .aggregate(CorrelationAggregation.class)
