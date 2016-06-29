@@ -15,6 +15,18 @@ services:
     volumes:
       - ../../../../:/docker/volumes/presto
 
+  presto-master-ldap:
+    image: 'teradatalabs/centos6-java8-oracle-ldap'
+    hostname: presto-master
+    env_file:
+      - ../../../target/classes/presto.env
+    volumes:
+      - /etc/ldap/rootca
+      - ../../../../:/docker/volumes/presto
+      - ../../../../presto-product-tests/conf/tempto/tempto-configuration-for-docker-ldap.yaml:/docker/volumes/tempto/tempto-configuration-local.yaml
+    ports:
+      - '8080:8080'
+
   hadoop-master-common:
     extends:
       service: hadoop-base

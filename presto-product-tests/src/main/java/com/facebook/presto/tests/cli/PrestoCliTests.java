@@ -88,6 +88,30 @@ public class PrestoCliTests
     @Named("databases.presto.cli_kerberos_use_canonical_hostname")
     private boolean kerberosUseCanonicalHostname;
 
+    @Inject(optional = true)
+    @Named("databases.presto.cli_ldap_authentication")
+    private boolean ldapAuthentication;
+
+    @Inject(optional = true)
+    @Named("databases.presto.cli_ldap_truststore_path")
+    private String ldapTruststorePath;
+
+    @Inject(optional = true)
+    @Named("databases.presto.cli_ldap_truststore_password")
+    private String ldapTruststorePassword;
+
+    @Inject(optional = true)
+    @Named("databases.presto.cli_ldap_user_name")
+    private String ldapUserName;
+
+    @Inject(optional = true)
+    @Named("databases.presto.cli_ldap_server_address")
+    private String ldapServerAddress;
+
+    @Inject(optional = true)
+    @Named("databases.presto.cli_ldap_user_password")
+    private String ldapUserPassword;
+
     private PrestoCliProcess presto;
 
     public PrestoCliTests()
@@ -127,6 +151,7 @@ public class PrestoCliTests
             throws IOException, InterruptedException
     {
         launchPrestoCliWithServerArgument();
+        setLdapPassword();
         presto.waitForPrompt();
         presto.getProcessInput().println("select * from hive.default.nation;");
         assertThat(trimLines(presto.readLinesUntilPrompt())).containsAll(nationTableInteractiveLines);
@@ -137,6 +162,7 @@ public class PrestoCliTests
             throws IOException, InterruptedException
     {
         launchPrestoCliWithServerArgument("--execute", "select * from hive.default.nation;");
+        setLdapPassword();
         assertThat(trimLines(presto.readRemainingOutputLines())).containsAll(nationTableBatchLines);
     }
 
@@ -145,6 +171,7 @@ public class PrestoCliTests
             throws IOException, InterruptedException
     {
         launchPrestoCliWithServerArgument("--catalog", "hive", "--schema", "default", "--execute", "select * from nation;");
+        setLdapPassword();
         assertThat(trimLines(presto.readRemainingOutputLines())).containsAll(nationTableBatchLines);
     }
 
@@ -157,16 +184,32 @@ public class PrestoCliTests
         Files.write("select * from hive.default.nation;\n", temporayFile, UTF_8);
 
         launchPrestoCliWithServerArgument("--file", temporayFile.getAbsolutePath());
+        setLdapPassword();
         assertThat(trimLines(presto.readRemainingOutputLines())).containsAll(nationTableBatchLines);
     }
 
     private void launchPrestoCliWithServerArgument(String... arguments)
             throws IOException, InterruptedException
     {
-        if (!authentication) {
-            launchPrestoCli(ImmutableList.<String>builder().add("--server", serverAddress).add(arguments).build());
+        if (ldapAuthentication) {
+            requireNonNull(ldapTruststorePath, "databases.presto.cli_ldap_truststore_path is null");
+            requireNonNull(ldapTruststorePassword, "databases.presto.cli_ldap_truststore_password is null");
+            requireNonNull(ldapUserName, "databases.presto.cli_ldap_user_name is null");
+            requireNonNull(ldapServerAddress, "databases.presto.cli_ldap_server_address is null");
+            requireNonNull(ldapUserPassword, "databases.presto.cli_ldap_user_password is null");
+
+            ImmutableList.Builder<String> prestoClientOptions = ImmutableList.builder();
+            prestoClientOptions.add(
+                    "--server", ldapServerAddress,
+                    "--truststore-path", ldapTruststorePath,
+                    "--truststore-password", ldapTruststorePassword,
+                    "--user", ldapUserName,
+                    "--password");
+
+            prestoClientOptions.add(arguments);
+            launchPrestoCli(prestoClientOptions.build());
         }
-        else {
+        else if (authentication) {
             requireNonNull(kerberosPrincipal, "databases.presto.cli_kerberos_principal is null");
             requireNonNull(kerberosKeytab, "databases.presto.cli_kerberos_keytab is null");
             requireNonNull(kerberosServiceName, "databases.presto.cli_kerberos_service_name is null");
@@ -190,6 +233,9 @@ public class PrestoCliTests
             prestoClientOptions.add(arguments);
             launchPrestoCli(prestoClientOptions.build());
         }
+        else {
+            launchPrestoCli(ImmutableList.<String>builder().add("--server", serverAddress).add(arguments).build());
+        }
     }
 
     private void launchPrestoCli(String... arguments)
@@ -202,5 +248,14 @@ public class PrestoCliTests
             throws IOException, InterruptedException
     {
         presto = new PrestoCliProcess(defaultJavaProcessLauncher().launch(Presto.class, arguments));
+    }
+
+    private void setLdapPassword()
+    {
+        if (ldapAuthentication) {
+            presto.waitForLdapPasswordPrompt();
+            presto.getProcessInput().println(ldapUserPassword);
+            presto.nextOutputToken();
+        }
     }
 }
