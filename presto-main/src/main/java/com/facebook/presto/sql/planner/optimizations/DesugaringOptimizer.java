@@ -35,6 +35,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 import static com.facebook.presto.sql.analyzer.ExpressionAnalyzer.getExpressionTypes;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 
 public class DesugaringOptimizer
@@ -110,7 +111,7 @@ public class DesugaringOptimizer
 
         private Expression desugar(Expression expression)
         {
-            IdentityHashMap<Expression, Type> expressionTypes = getExpressionTypes(session, metadata, sqlParser, types, expression);
+            IdentityHashMap<Expression, Type> expressionTypes = getExpressionTypes(session, metadata, sqlParser, types, expression, emptyList() /* parameters already replaced */);
             return ExpressionTreeRewriter.rewriteWith(new DesugaringRewriter(expressionTypes), expression);
         }
     }

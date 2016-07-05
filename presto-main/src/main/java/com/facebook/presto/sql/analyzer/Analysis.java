@@ -50,6 +50,7 @@ import static java.util.Objects.requireNonNull;
 
 public class Analysis
 {
+    private final List<Expression> parameters;
     private Statement statement;
     private String updateType;
 
@@ -90,6 +91,11 @@ public class Analysis
     private boolean createTableAsSelectNoOp = false;
 
     private Optional<Insert> insert = Optional.empty();
+
+    public Analysis(List<Expression> parameters)
+    {
+        this.parameters = requireNonNull(parameters, "parameters is null");
+    }
 
     public Statement getStatement()
     {
@@ -420,6 +426,11 @@ public class Analysis
     {
         Preconditions.checkState(sampleRatios.containsKey(relation), "Sample ratio missing for %s. Broken analysis?", relation);
         return sampleRatios.get(relation);
+    }
+
+    public List<Expression> getParameters()
+    {
+        return parameters;
     }
 
     @Immutable

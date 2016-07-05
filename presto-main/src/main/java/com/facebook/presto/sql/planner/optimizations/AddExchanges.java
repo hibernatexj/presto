@@ -128,6 +128,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 
 public class AddExchanges
@@ -720,7 +721,13 @@ public class AddExchanges
         private boolean shouldPrune(Expression predicate, Map<Symbol, ColumnHandle> assignments, Map<ColumnHandle, NullableValue> bindings)
         {
             List<Expression> conjuncts = extractConjuncts(predicate);
-            IdentityHashMap<Expression, Type> expressionTypes = getExpressionTypes(session, metadata, parser, symbolAllocator.getTypes(), predicate);
+            IdentityHashMap<Expression, Type> expressionTypes = getExpressionTypes(
+                    session,
+                    metadata,
+                    parser,
+                    symbolAllocator.getTypes(),
+                    predicate,
+                    emptyList() /* parameters already replaced */);
 
             LookupSymbolResolver inputs = new LookupSymbolResolver(assignments, bindings);
 

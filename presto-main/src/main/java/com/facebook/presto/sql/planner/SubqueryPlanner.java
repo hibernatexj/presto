@@ -14,6 +14,7 @@
 package com.facebook.presto.sql.planner;
 
 import com.facebook.presto.Session;
+import com.facebook.presto.execution.ParameterRewriter;
 import com.facebook.presto.metadata.Metadata;
 import com.facebook.presto.sql.analyzer.Analysis;
 import com.facebook.presto.sql.planner.plan.ApplyNode;
@@ -109,7 +110,8 @@ class SubqueryPlanner
                         subPlan.getRoot(),
                         valueListRelation.getRoot(),
                         ImmutableList.of()),
-                subPlan.getSampleWeight());
+                subPlan.getSampleWeight(),
+                new ParameterRewriter(analysis.getParameters(), analysis));
     }
 
     private PlanBuilder appendScalarSubqueryApplyNodes(PlanBuilder builder, Set<SubqueryExpression> scalarSubqueries)
@@ -135,7 +137,7 @@ class SubqueryPlanner
         PlanNode root = subPlan.getRoot();
         if (root.getOutputSymbols().isEmpty()) {
             // there is nothing to join with - e.g. SELECT (SELECT 1)
-            return new PlanBuilder(translations, enforceSingleRowNode, subPlan.getSampleWeight());
+            return new PlanBuilder(translations, enforceSingleRowNode, subPlan.getSampleWeight(), new ParameterRewriter(analysis.getParameters(), analysis));
         }
         else {
             return new PlanBuilder(translations,
@@ -144,7 +146,8 @@ class SubqueryPlanner
                             root,
                             enforceSingleRowNode,
                             ImmutableList.of()),
-                    subPlan.getSampleWeight());
+                    subPlan.getSampleWeight(),
+                    new ParameterRewriter(analysis.getParameters(), analysis));
         }
     }
 

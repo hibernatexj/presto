@@ -13,6 +13,7 @@
  */
 package com.facebook.presto.sql.analyzer;
 
+import com.facebook.presto.execution.ParameterRewriter;
 import com.facebook.presto.metadata.Metadata;
 import com.facebook.presto.sql.tree.ArithmeticBinaryExpression;
 import com.facebook.presto.sql.tree.ArithmeticUnaryExpression;
@@ -26,6 +27,7 @@ import com.facebook.presto.sql.tree.ComparisonExpression;
 import com.facebook.presto.sql.tree.CurrentTime;
 import com.facebook.presto.sql.tree.DereferenceExpression;
 import com.facebook.presto.sql.tree.Expression;
+import com.facebook.presto.sql.tree.ExpressionTreeRewriter;
 import com.facebook.presto.sql.tree.Extract;
 import com.facebook.presto.sql.tree.FieldReference;
 import com.facebook.presto.sql.tree.FunctionCall;
@@ -40,6 +42,7 @@ import com.facebook.presto.sql.tree.LogicalBinaryExpression;
 import com.facebook.presto.sql.tree.Node;
 import com.facebook.presto.sql.tree.NotExpression;
 import com.facebook.presto.sql.tree.NullIfExpression;
+import com.facebook.presto.sql.tree.Parameter;
 import com.facebook.presto.sql.tree.QualifiedName;
 import com.facebook.presto.sql.tree.QualifiedNameReference;
 import com.facebook.presto.sql.tree.Row;
@@ -65,7 +68,9 @@ import java.util.Set;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.MUST_BE_AGGREGATE_OR_GROUP_BY;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.NESTED_AGGREGATION;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.NESTED_WINDOW;
+import static com.facebook.presto.util.ImmutableCollectors.toImmutableList;
 import static com.facebook.presto.util.Types.checkType;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -80,20 +85,23 @@ class AggregationAnalyzer
 
     private final Metadata metadata;
     private final Set<Expression> columnReferences;
+    private final List<Expression> parameters;
 
     private final RelationType tupleDescriptor;
 
-    public AggregationAnalyzer(List<Expression> groupByExpressions, Metadata metadata, RelationType tupleDescriptor, Set<Expression> columnReferences)
+    public AggregationAnalyzer(List<Expression> groupByExpressions, Metadata metadata, RelationType tupleDescriptor, Set<Expression> columnReferences, List<Expression> parameters)
     {
         requireNonNull(groupByExpressions, "groupByExpressions is null");
         requireNonNull(metadata, "metadata is null");
         requireNonNull(tupleDescriptor, "tupleDescriptor is null");
         requireNonNull(columnReferences, "columnReferences is null");
+        requireNonNull(parameters, "parameters is null");
 
         this.tupleDescriptor = tupleDescriptor;
         this.metadata = metadata;
         this.columnReferences = ImmutableSet.copyOf(columnReferences);
-        this.expressions = ImmutableList.copyOf(groupByExpressions);
+        this.parameters = parameters;
+        this.expressions = groupByExpressions.stream().map(e -> ExpressionTreeRewriter.rewriteWith(new ParameterRewriter(parameters), e)).collect(toImmutableList());
         ImmutableList.Builder<Integer> fieldIndexes = ImmutableList.builder();
 
         fieldIndexes.addAll(groupByExpressions.stream()
@@ -450,8 +458,19 @@ class AggregationAnalyzer
         }
 
         @Override
+        public Boolean visitParameter(Parameter node, Void context)
+        {
+            checkArgument(node.getPosition() < parameters.size(), "Invalid parameter number %s, max values is %s", node.getPosition(), parameters.size() - 1);
+            return process(parameters.get(node.getPosition()), context);
+        }
+
+        @Override
         public Boolean process(Node node, @Nullable Void context)
         {
+            if (node instanceof Expression) {
+                node = ExpressionTreeRewriter.rewriteWith(new ParameterRewriter(parameters), (Expression) node);
+            }
+
             if (expressions.stream().anyMatch(node::equals)) {
                 return true;
             }

@@ -118,7 +118,6 @@ import static com.facebook.presto.spi.type.VarcharType.VARCHAR;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.AMBIGUOUS_ATTRIBUTE;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.EXPRESSION_NOT_CONSTANT;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.INVALID_LITERAL;
-import static com.facebook.presto.sql.analyzer.SemanticErrorCode.INVALID_PARAMETER_USAGE;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.MISSING_ATTRIBUTE;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.MULTIPLE_FIELDS_FROM_SUBQUERY;
 import static com.facebook.presto.sql.analyzer.SemanticErrorCode.NOT_SUPPORTED;
@@ -151,13 +150,20 @@ public class ExpressionAnalyzer
     private final Set<Expression> typeOnlyCoercions = newIdentityHashSet();
     private final Set<InPredicate> subqueryInPredicates = newIdentityHashSet();
     private final Session session;
+    private final List<Expression> parameters;
 
-    public ExpressionAnalyzer(FunctionRegistry functionRegistry, TypeManager typeManager, Function<Node, StatementAnalyzer> statementAnalyzerFactory, Session session)
+    public ExpressionAnalyzer(
+            FunctionRegistry functionRegistry,
+            TypeManager typeManager,
+            Function<Node, StatementAnalyzer> statementAnalyzerFactory,
+            Session session,
+            List<Expression> parameters)
     {
         this.functionRegistry = requireNonNull(functionRegistry, "functionRegistry is null");
         this.typeManager = requireNonNull(typeManager, "typeManager is null");
         this.statementAnalyzerFactory = requireNonNull(statementAnalyzerFactory, "statementAnalyzerFactory is null");
         this.session = requireNonNull(session, "session is null");
+        this.parameters = requireNonNull(parameters, "parameters is null");
     }
 
     public Map<Expression, Integer> getResolvedNames()
@@ -813,7 +819,10 @@ public class ExpressionAnalyzer
         @Override
         protected Type visitParameter(Parameter node, StackableAstVisitorContext<AnalysisContext> context)
         {
-            throw new SemanticException(INVALID_PARAMETER_USAGE, node, "Parameters are only allowed in prepared statements");
+            checkArgument(node.getPosition() < parameters.size(), "invalid parameter number %s, max value is %s", node.getPosition(), parameters.size() - 1);
+            Type resultType = process(parameters.get(node.getPosition()), context);
+            expressionTypes.put(node, resultType);
+            return resultType;
         }
 
         @Override
@@ -1078,9 +1087,10 @@ public class ExpressionAnalyzer
             Metadata metadata,
             SqlParser sqlParser,
             Map<Symbol, Type> types,
-            Expression expression)
+            Expression expression,
+            List<Expression> parameters)
     {
-        return getExpressionTypes(session, metadata, sqlParser, types, ImmutableList.of(expression));
+        return getExpressionTypes(session, metadata, sqlParser, types, ImmutableList.of(expression), parameters);
     }
 
     public static IdentityHashMap<Expression, Type> getExpressionTypes(
@@ -1088,9 +1098,10 @@ public class ExpressionAnalyzer
             Metadata metadata,
             SqlParser sqlParser,
             Map<Symbol, Type> types,
-            Iterable<? extends Expression> expressions)
+            Iterable<? extends Expression> expressions,
+            List<Expression> parameters)
     {
-        return analyzeExpressionsWithSymbols(session, metadata, sqlParser, types, expressions).getExpressionTypes();
+        return analyzeExpressionsWithSymbols(session, metadata, sqlParser, types, expressions, parameters).getExpressionTypes();
     }
 
     public static IdentityHashMap<Expression, Type> getExpressionTypesFromInput(
@@ -1098,9 +1109,10 @@ public class ExpressionAnalyzer
             Metadata metadata,
             SqlParser sqlParser,
             Map<Integer, Type> types,
-            Expression expression)
+            Expression expression,
+            List<Expression> parameters)
     {
-        return getExpressionTypesFromInput(session, metadata, sqlParser, types, ImmutableList.of(expression));
+        return getExpressionTypesFromInput(session, metadata, sqlParser, types, ImmutableList.of(expression), parameters);
     }
 
     public static IdentityHashMap<Expression, Type> getExpressionTypesFromInput(
@@ -1108,9 +1120,10 @@ public class ExpressionAnalyzer
             Metadata metadata,
             SqlParser sqlParser,
             Map<Integer, Type> types,
-            Iterable<? extends Expression> expressions)
+            Iterable<? extends Expression> expressions,
+            List<Expression> parameters)
     {
-        return analyzeExpressionsWithInputs(session, metadata, sqlParser, types, expressions).getExpressionTypes();
+        return analyzeExpressionsWithInputs(session, metadata, sqlParser, types, expressions, parameters).getExpressionTypes();
     }
 
     public static ExpressionAnalysis analyzeExpressionsWithSymbols(
@@ -1118,7 +1131,8 @@ public class ExpressionAnalyzer
             Metadata metadata,
             SqlParser sqlParser,
             Map<Symbol, Type> types,
-            Iterable<? extends Expression> expressions)
+            Iterable<? extends Expression> expressions,
+            List<Expression> parameters)
     {
         List<Field> fields = DependencyExtractor.extractUnique(expressions).stream()
                 .map(symbol -> {
@@ -1128,7 +1142,7 @@ public class ExpressionAnalyzer
                 })
                 .collect(toImmutableList());
 
-        return analyzeExpressions(session, metadata, sqlParser, new RelationType(fields), expressions);
+        return analyzeExpressions(session, metadata, sqlParser, new RelationType(fields), expressions, parameters);
     }
 
     private static ExpressionAnalysis analyzeExpressionsWithInputs(
@@ -1136,7 +1150,8 @@ public class ExpressionAnalyzer
             Metadata metadata,
             SqlParser sqlParser,
             Map<Integer, Type> types,
-            Iterable<? extends Expression> expressions)
+            Iterable<? extends Expression> expressions,
+            List<Expression> parameters)
     {
         Field[] fields = new Field[types.size()];
         for (Entry<Integer, Type> entry : types.entrySet()) {
@@ -1144,7 +1159,7 @@ public class ExpressionAnalyzer
         }
         RelationType tupleDescriptor = new RelationType(fields);
 
-        return analyzeExpressions(session, metadata, sqlParser, tupleDescriptor, expressions);
+        return analyzeExpressions(session, metadata, sqlParser, tupleDescriptor, expressions, parameters);
     }
 
     private static ExpressionAnalysis analyzeExpressions(
@@ -1152,11 +1167,12 @@ public class ExpressionAnalyzer
             Metadata metadata,
             SqlParser sqlParser,
             RelationType tupleDescriptor,
-            Iterable<? extends Expression> expressions)
+            Iterable<? extends Expression> expressions,
+            List<Expression> parameters)
     {
         // expressions at this point can not have sub queries so deny all access checks
         // in the future, we will need a full access controller here to verify access to functions
-        ExpressionAnalyzer analyzer = create(new Analysis(), session, metadata, sqlParser, new DenyAllAccessControl(), false);
+        ExpressionAnalyzer analyzer = create(new Analysis(parameters), session, metadata, sqlParser, new DenyAllAccessControl(), false);
         for (Expression expression : expressions) {
             analyzer.analyze(expression, tupleDescriptor, new AnalysisContext());
         }
@@ -1216,23 +1232,31 @@ public class ExpressionAnalyzer
                 metadata.getFunctionRegistry(),
                 metadata.getTypeManager(),
                 node -> new StatementAnalyzer(analysis, metadata, sqlParser, accessControl, session, experimentalSyntaxEnabled, Optional.empty()),
-                session);
+                session,
+                analysis.getParameters());
     }
 
-    public static ExpressionAnalyzer createConstantAnalyzer(Metadata metadata, Session session)
+    public static ExpressionAnalyzer createConstantAnalyzer(Metadata metadata, Session session, List<Expression> parameters)
     {
         return createWithoutSubqueries(
                 metadata.getFunctionRegistry(),
                 metadata.getTypeManager(),
                 session,
+                parameters,
                 EXPRESSION_NOT_CONSTANT,
                 "Constant expression cannot contain a subquery");
     }
 
-    public static ExpressionAnalyzer createWithoutSubqueries(FunctionRegistry functionRegistry, TypeManager typeManager, Session session, SemanticErrorCode errorCode, String message)
+    public static ExpressionAnalyzer createWithoutSubqueries(
+            FunctionRegistry functionRegistry,
+            TypeManager typeManager,
+            Session session,
+            List<Expression> parameters,
+            SemanticErrorCode errorCode,
+            String message)
     {
         return new ExpressionAnalyzer(functionRegistry, typeManager, node -> {
             throw new SemanticException(errorCode, node, message);
-        }, session);
+        }, session, parameters);
     }
 }

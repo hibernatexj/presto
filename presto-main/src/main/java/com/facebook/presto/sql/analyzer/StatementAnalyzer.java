@@ -43,7 +43,6 @@ import com.facebook.presto.sql.parser.SqlParser;
 import com.facebook.presto.sql.planner.DependencyExtractor;
 import com.facebook.presto.sql.planner.ExpressionInterpreter;
 import com.facebook.presto.sql.planner.NoOpSymbolResolver;
-import com.facebook.presto.sql.planner.Symbol;
 import com.facebook.presto.sql.planner.optimizations.CanonicalizeExpressions;
 import com.facebook.presto.sql.tree.AliasedRelation;
 import com.facebook.presto.sql.tree.AllColumns;
@@ -59,6 +58,7 @@ import com.facebook.presto.sql.tree.Delete;
 import com.facebook.presto.sql.tree.DereferenceExpression;
 import com.facebook.presto.sql.tree.DoubleLiteral;
 import com.facebook.presto.sql.tree.Except;
+import com.facebook.presto.sql.tree.Execute;
 import com.facebook.presto.sql.tree.Explain;
 import com.facebook.presto.sql.tree.ExplainFormat;
 import com.facebook.presto.sql.tree.ExplainOption;
@@ -140,6 +140,7 @@ import static com.facebook.presto.connector.informationSchema.InformationSchemaM
 import static com.facebook.presto.connector.informationSchema.InformationSchemaMetadata.TABLE_SCHEMATA;
 import static com.facebook.presto.connector.informationSchema.InformationSchemaMetadata.TABLE_TABLES;
 import static com.facebook.presto.execution.SqlQueryManager.unwrapExecuteStatement;
+import static com.facebook.presto.execution.SqlQueryManager.validateParameters;
 import static com.facebook.presto.metadata.FunctionKind.AGGREGATE;
 import static com.facebook.presto.metadata.FunctionKind.APPROXIMATE_AGGREGATE;
 import static com.facebook.presto.metadata.FunctionKind.WINDOW;
@@ -224,6 +225,7 @@ import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.Iterables.transform;
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
@@ -500,7 +502,8 @@ class StatementAnalyzer
             }
 
             Query query = parseView(viewDefinition.get().getOriginalSql(), objectName, node);
-            String sql = formatSql(new CreateView(createQualifiedName(objectName), query, false)).trim();
+            process(query, context);
+            String sql = formatSql(new CreateView(createQualifiedName(objectName), query, false), Optional.of(analysis.getParameters())).trim();
             return process(singleValueQuery("Create View", sql), context);
         }
 
@@ -547,7 +550,8 @@ class StatementAnalyzer
             }
 
             CreateTable createTable = new CreateTable(QualifiedName.of(objectName.getCatalogName(), objectName.getSchemaName(), objectName.getObjectName()), columns, false, sqlProperties);
-            Query query = singleValueQuery("Create Table", formatSql(createTable).trim());
+            process(createTable, context);
+            Query query = singleValueQuery("Create Table", formatSql(createTable, Optional.of(analysis.getParameters())).trim());
 
             return process(query, context);
         }
@@ -789,7 +793,7 @@ class StatementAnalyzer
 
         for (Expression expression : node.getProperties().values()) {
             // analyze table property value expressions which must be constant
-            createConstantAnalyzer(metadata, session)
+            createConstantAnalyzer(metadata, session, analysis.getParameters())
                     .analyze(expression, new RelationType(), context);
         }
         analysis.setCreateTableProperties(node.getProperties());
@@ -903,12 +907,19 @@ class StatementAnalyzer
     private String getQueryPlan(Explain node, ExplainType.Type planType, ExplainFormat.Type planFormat)
             throws IllegalArgumentException
     {
-        Statement statement = unwrapExecuteStatement(node.getStatement(), sqlParser, session);
+        Statement wrapped = node.getStatement();
+        Statement statement = unwrapExecuteStatement(wrapped, sqlParser, session);
+        List<Expression> parameters = emptyList();
+        if (wrapped instanceof Execute) {
+            parameters = ((Execute) wrapped).getParameters();
+            validateParameters(statement, parameters);
+        }
+
         switch (planFormat) {
             case GRAPHVIZ:
-                return queryExplainer.get().getGraphvizPlan(session, statement, planType);
+                return queryExplainer.get().getGraphvizPlan(session, statement, planType, parameters);
             case TEXT:
-                return queryExplainer.get().getPlan(session, statement, planType);
+                return queryExplainer.get().getPlan(session, statement, planType, parameters);
         }
         throw new IllegalArgumentException("Invalid Explain Format: " + planFormat.toString());
     }
@@ -1110,7 +1121,13 @@ class StatementAnalyzer
             throw new SemanticException(NON_NUMERIC_SAMPLE_PERCENTAGE, relation.getSamplePercentage(), "Sample percentage cannot contain column references");
         }
 
-        IdentityHashMap<Expression, Type> expressionTypes = getExpressionTypes(session, metadata, sqlParser, ImmutableMap.<Symbol, Type>of(), relation.getSamplePercentage());
+        IdentityHashMap<Expression, Type> expressionTypes = getExpressionTypes(
+                session,
+                metadata,
+                sqlParser,
+                ImmutableMap.of(),
+                relation.getSamplePercentage(),
+                analysis.getParameters());
         ExpressionInterpreter samplePercentageEval = expressionOptimizer(relation.getSamplePercentage(), metadata, session, expressionTypes);
 
         Object samplePercentageObject = samplePercentageEval.optimize(symbol -> {
@@ -1952,7 +1969,7 @@ class StatementAnalyzer
             Expression expression,
             Set<Expression> columnReferences)
     {
-        AggregationAnalyzer analyzer = new AggregationAnalyzer(groupByExpressions, metadata, tupleDescriptor, columnReferences);
+        AggregationAnalyzer analyzer = new AggregationAnalyzer(groupByExpressions, metadata, tupleDescriptor, columnReferences, analysis.getParameters());
         analyzer.analyze(expression);
     }
 

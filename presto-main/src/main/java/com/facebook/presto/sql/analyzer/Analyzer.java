@@ -37,13 +37,15 @@ public class Analyzer
     private final Session session;
     private final Optional<QueryExplainer> queryExplainer;
     private final boolean experimentalSyntaxEnabled;
+    private final List<Expression> parameters;
 
     public Analyzer(Session session,
             Metadata metadata,
             SqlParser sqlParser,
             AccessControl accessControl,
             Optional<QueryExplainer> queryExplainer,
-            boolean experimentalSyntaxEnabled)
+            boolean experimentalSyntaxEnabled,
+            List<Expression> parameters)
     {
         this.session = requireNonNull(session, "session is null");
         this.metadata = requireNonNull(metadata, "metadata is null");
@@ -51,11 +53,12 @@ public class Analyzer
         this.accessControl = requireNonNull(accessControl, "accessControl is null");
         this.queryExplainer = requireNonNull(queryExplainer, "query explainer is null");
         this.experimentalSyntaxEnabled = experimentalSyntaxEnabled;
+        this.parameters = parameters;
     }
 
     public Analysis analyze(Statement statement)
     {
-        Analysis analysis = new Analysis();
+        Analysis analysis = new Analysis(parameters);
         StatementAnalyzer analyzer = new StatementAnalyzer(analysis, metadata, sqlParser, accessControl, session, experimentalSyntaxEnabled, queryExplainer);
         RelationType outputDescriptor = analyzer.process(statement, new AnalysisContext());
         analysis.setOutputDescriptor(outputDescriptor);

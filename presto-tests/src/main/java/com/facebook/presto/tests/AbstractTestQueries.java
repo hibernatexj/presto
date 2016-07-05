@@ -4439,6 +4439,22 @@ public abstract class AbstractTestQueries
     }
 
     @Test
+    public void testExplainExecuteWithUsing()
+    {
+        Session session = getSession().withPreparedStatement("my_query", "SELECT * FROM orders where orderkey < ?");
+        MaterializedResult result = computeActual(session, "EXPLAIN (TYPE LOGICAL) EXECUTE my_query USING 7");
+        assertEquals(getOnlyElement(result.getOnlyColumnAsSet()), getExplainPlan("SELECT * FROM orders where orderkey < 7", LOGICAL));
+    }
+
+    @Test
+    public void testExplainSetSessionWithUsing()
+    {
+        Session session = getSession().withPreparedStatement("my_query", "SET SESSION foo = ?");
+        MaterializedResult result = computeActual(session, "EXPLAIN (TYPE LOGICAL) EXECUTE my_query USING 7");
+        assertEquals(getOnlyElement(result.getOnlyColumnAsSet()), "SET SESSION foo = 7");
+    }
+
+    @Test
     public void testShowCatalogs()
             throws Exception
     {
@@ -6533,6 +6549,17 @@ public abstract class AbstractTestQueries
     {
         Session session = getSession().withPreparedStatement("my_query", "SELECT 123, 'abc'");
         assertQuery(session, "EXECUTE my_query", "SELECT 123, 'abc'");
+    }
+
+    @Test
+    public void testExecuteWithUsing()
+            throws Exception
+    {
+        String query = "SELECT a + ?, count(1) FROM (VALUES 1, 2, 3, 2) t(a) GROUP BY a + ? HAVING count(1) > ?";
+        Session session = getSession().withPreparedStatement("my_query", query);
+        assertQuery(session,
+                "EXECUTE my_query USING 1, 1, 0",
+                "VALUES (2, 1), (3, 2), (4, 1)");
     }
 
     @Test

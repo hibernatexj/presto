@@ -13,10 +13,12 @@
  */
 package com.facebook.presto.sql.planner;
 
+import com.facebook.presto.execution.ParameterRewriter;
 import com.facebook.presto.sql.analyzer.Analysis;
 import com.facebook.presto.sql.planner.plan.PlanNode;
 import com.facebook.presto.sql.planner.plan.ProjectNode;
 import com.facebook.presto.sql.tree.Expression;
+import com.facebook.presto.sql.tree.ExpressionTreeRewriter;
 import com.facebook.presto.sql.tree.QualifiedNameReference;
 import com.google.common.collect.ImmutableMap;
 
@@ -28,18 +30,21 @@ import static java.util.Objects.requireNonNull;
 class PlanBuilder
 {
     private final TranslationMap translations;
+    private final ParameterRewriter parameterRewriter;
     private final PlanNode root;
     private final Optional<Symbol> sampleWeight;
 
-    public PlanBuilder(TranslationMap translations, PlanNode root, Optional<Symbol> sampleWeight)
+    public PlanBuilder(TranslationMap translations, PlanNode root, Optional<Symbol> sampleWeight, ParameterRewriter parameterRewriter)
     {
         requireNonNull(translations, "translations is null");
         requireNonNull(root, "root is null");
         requireNonNull(sampleWeight, "sampleWeight is null");
+        requireNonNull(parameterRewriter, "parameterRewriter is null");
 
         this.translations = translations;
         this.root = root;
         this.sampleWeight = sampleWeight;
+        this.parameterRewriter = parameterRewriter;
     }
 
     public TranslationMap copyTranslations()
@@ -56,7 +61,7 @@ class PlanBuilder
 
     public PlanBuilder withNewRoot(PlanNode root)
     {
-        return new PlanBuilder(translations, root, sampleWeight);
+        return new PlanBuilder(translations, root, sampleWeight, parameterRewriter);
     }
 
     public Optional<Symbol> getSampleWeight()
@@ -108,6 +113,7 @@ class PlanBuilder
 
         ImmutableMap.Builder<Symbol, Expression> newTranslations = ImmutableMap.builder();
         for (Expression expression : expressions) {
+            expression = ExpressionTreeRewriter.rewriteWith(parameterRewriter, expression);
             Symbol symbol = symbolAllocator.newSymbol(expression, getAnalysis().getTypeWithCoercions(expression));
 
             projections.put(symbol, translations.rewrite(expression));
@@ -118,6 +124,6 @@ class PlanBuilder
             translations.put(entry.getValue(), entry.getKey());
         }
 
-        return new PlanBuilder(translations, new ProjectNode(idAllocator.getNextId(), getRoot(), projections.build()), getSampleWeight());
+        return new PlanBuilder(translations, new ProjectNode(idAllocator.getNextId(), getRoot(), projections.build()), getSampleWeight(), parameterRewriter);
     }
 }
