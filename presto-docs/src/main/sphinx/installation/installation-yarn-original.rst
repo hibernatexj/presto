@@ -1,6 +1,6 @@
-======================================
- Presto on Yarn-based cluster
-======================================
+﻿==============================================
+Automated Installation on a YARN-Based Cluster
+==============================================
 
 .. contents:: Presto YARN Integration
 

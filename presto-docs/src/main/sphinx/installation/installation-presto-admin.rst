@@ -4,9 +4,9 @@ Manual Installation with Presto Admin
 
 `Mailing list <http://groups.google.com/group/presto-users>`_ |
 `Issues <https://github.com/prestodb/presto-admin/issues>`_ |
-`Github <https://github.com/prestodb/presto-admin>`_ |
+`GitHub <https://github.com/prestodb/presto-admin>`_ |
 
-Presto-Admin is a tool for installing and managing the Presto query engine on a
+Presto Admin is a tool for installing and managing the Presto query engine on a
 cluster. It provides easy-to-use commands to:
 
     * Install and uninstall Presto across your cluster
@@ -20,3 +20,5 @@ cluster. It provides easy-to-use commands to:
 
     Install Presto using Presto Admin <presto-admin/quick-start-guide.rst>
     Comprehensive Presto Admin User Guide <presto-admin/user-guide.rst>
+    
+    <presto-admin/installation/java-installation.rst>

@@ -2,49 +2,38 @@
 Automated Installation for a Cluster
 ************************************
 
-You can use Apache Ambari to install Presto. To install Presto 
-using Ambari you must have the `Presto Ambari Integration package <https:www.teradata.com/presto>`_. 
+Presto can be installed using Apache Ambari. To install Presto using Ambari you
+need to have the `Presto Ambari Integration package
+<https:www.teradata.com/presto>`_. These instructions **do not describe how to
+install Presto integrated with YARN using Ambari**. For instructions how to do that follow
+:doc:`Automated Installation with Ambari 2.1 with YARN integration <installation-yarn>`.
 
-Note:
-The following procedures **do not describe how to use Ambari to 
-install Presto on YARN-based clusters. For those procedures, see:
+.. contents:: Presto Ambari Integration
 
-:doc:`Automated Installation with Ambari 2.1 with YARN integration <installation-yarn-automated>`.
-
-.. contents:: Installing Presto with Ambari
-
-Pre-Requisites
---------------
+Requirements for integration
+----------------------------
 
 1. Red Hat Enterprise Linux 6.x (64-bit) or CentOS equivalent.
 2. You must have Ambari installed and thus transitively fulfill `Ambari's requirements <http://docs.hortonworks.com/HDPDocuments/Ambari-2.1.2.1/bk_Installing_HDP_AMB/content/_meet_minimum_system_requirements.html>`_.
-3. Oracle Java JDK 1.8 (64-bit). Note that when installing Ambari you will be prompted to 
-   select a JDK. You can tell Ambari to download Oracle JDK 1.8 or point Ambari to an 
-   existing installation. Presto picks up the JDK Ambari was installed with so it is 
-   imperative that Ambari is running on Oracle JDK 1.8.
-4. Disable ``requiretty``. On RHEL 6.x this can be done by editing the ``/etc/sudoers`` 
-   file and commenting out ``Defaults    requiretty``.
+3. Oracle Java JDK 1.8 (64-bit). Note that when installing Ambari you will be prompted to pick a JDK. You can tell Ambari to download Oracle JDK 1.8 or point it to an existing installation. Presto picks up whatever JDK Ambari was installed with so it is imperative that Ambari is running on Oracle JDK 1.8.
+4. Disable ``requiretty``. On RHEL 6.x this can be done by editing the ``/etc/sudoers`` file and commenting out ``Defaults    requiretty``.
 5. Install ``wget`` on all nodes that will run a Presto component.
 
-Adding the Presto Service
+Adding the Presto service
 -------------------------
 
-This section and the following sections walk you through the integration steps needed to 
-get Presto working with Ambari. By default, this integration code installs the latest 
-Teradata Presto release (0.141t).
+This section and all others that follow walk you through the integration steps needed to get Presto working with Ambari. By default, this integration code installs the latest Teradata Presto release (0.141t).
 
-To integrate the Presto service with Ambari:
+To integrate the Presto service with Ambari, follow the steps outlined below:
 
-1. Assuming HDP 2.3 was installed with Ambari, create the following directory on the node 
-   where the ``ambari-server`` is running:
+* Assuming HDP 2.3 was installed with Ambari, create the following directory on the node where the ``ambari-server`` is running:
 
 .. code-block:: bash
 
 	$ mkdir /var/lib/ambari-server/resources/stacks/HDP/2.3/services/PRESTO
 	$ cd /var/lib/ambari-server/resources/stacks/HDP/2.3/services/PRESTO
 
-2. Place the integration files within the newly created PRESTO directory by uploading the 
-   integration archive to your cluster and extracting it as follows:
+* Place the integration files within the newly created PRESTO directory by uploading the integration archive to your cluster and extracting it like so:
 
 .. code-block:: bash
 
@@ -52,64 +41,35 @@ To integrate the Presto service with Ambari:
 	$ mv /var/lib/ambari-server/resources/stacks/HDP/2.3/services/PRESTO/ambari-presto-0.1.0/* /var/lib/ambari-server/resources/stacks/HDP/2.3/services/PRESTO
 	$ rm -rf /var/lib/ambari-server/resources/stacks/HDP/2.3/services/PRESTO/ambari-presto-0.1.0
 
-3. Make all integration files executable and restart the Ambari server:
+* Finally, make all integration files executable and restart the Ambari server:
 
 .. code-block:: bash
 
 	$ chmod -R +x /var/lib/ambari-server/resources/stacks/HDP/2.3/services/PRESTO/*
 	$ ambari-server restart
 
-4. After the server restarts, point your browser to it.
+* Once the server has restarted, point your browser to it and on the main Ambari Web UI page click the ``Add Service`` button and follow the on screen wizard to add Presto. The following sections provide more details on the options and choices you will make when adding Presto.
 
-5. On the main Ambari Web UI page, click the ``Add Service`` button and follow the 
-   on screen wizard to add Presto. 
-   
-   The following sections provide more details about the options and choices you 
-   need to make when adding Presto to the cluster.
+Supported Topologies
+--------------------
 
-Assigning Presto Processes to Nodes in a Cluster
-------------------------------------------------
+The following two screens will allow you to assign the Presto processes among the nodes in your cluster. Once you pick a topology for Presto and finish the installation process it is impossible to modify that topology.
 
-Presto is composed of a coordinator and worker processes. The same code runs all nodes 
-because the same Presto server RPM is installed for both workers and coordinator. It is 
-the configuration on each node that determines how a particular node will behave. 
+Presto is composed of a coordinator and worker processes. The same code runs all nodes because the same Presto server RPM is installed for both workers and coordinator. It is the configuration on each node that determines how a particular node will behave. Presto can run in pseudo-distributed mode, where a single Presto process on one node acts as both coordinator and worker, or in distributed mode, where the Presto coordinator runs on one node and the Presto workers run on other nodes.
 
-Presto can run in distributed mode or psuedo-distributed mode. 
+The client component of Presto is the ``presto-cli`` executable JAR. You should place it on all nodes where you expect to access the Presto server via this command line utility. The ``presto-cli`` executable JAR does not need to be co-located with either a worker or a coordinator, it can be installed on its own. Once installed, the CLI can be found at ``/usr/lib/presto/bin/presto-cli``.
 
-* In distributed mode, the Presto coordinator runs on one node and the Presto workers 
-  run on other nodes. Distributed mode is recommended.
+**Do not place a worker on the same node as a coordinator.** Such an attempt will fail the installation because the integration software will attempt to install the RPM twice. In order to schedule work on the Presto coordinator, effectively turning the process into a dual worker/coordinator, please enable the ``node-scheduler.include-coordinator`` toggle available in the configuration screen.
 
-* In pseudo-distributed mode, a single Presto process on one node acts as both 
-  coordinator and worker. Pseudo-distributed mode is not recommended for production.
+Pseudo-distributed
+^^^^^^^^^^^^^^^^^^
 
-.. Matt recommended removing pseudo-distributed as a topology to use for Presto.
+Pick a node for the Presto coordinator and **do not assign any Presto workers**. On the configuration screen that follows, you must also enable ``node-scheduler.include-coordinator`` by clicking the toggle.
 
-When you select a topology for Presto and finish the installation process as described 
-below, **you cannot modify that topology**.
+Distributed
+^^^^^^^^^^^
 
-1. After you add the Presto Service, two screens on the main Ambari WebUI page 
-   allow you to assign the Presto processes among the nodes in your cluster.
-
-   a. Select a node for the Presto coordinator.
-   b. Assign as many Presto workers to nodes as you need.
-      **Do not place a worker on the same node as a coordinator.** Doing so causes 
-      the installation to fail because the integration software will attempt to 
-      install the RPM twice. 
-
-2. Place the client component on any node. 
-
-3.  
-
-To schedule work on the Presto coordinator, effectively turning the process into a dual 
-worker/coordinator, enable the ``node-scheduler.include-coordinator`` toggle available 
-in the configuration screen.
-
-
-The client component of Presto is the ``presto-cli`` executable JAR. Place it 
-on all nodes where you expect to access the Presto server with this command line utility. 
-The ``presto-cli`` executable JAR does not need to be co-located with either a worker or 
-a coordinator. It can be installed on its own. Once installed, the CLI can be found at 
-``/usr/lib/presto/bin/presto-cli``.
+Pick a node for the Presto coordinator and assign as many Presto workers to nodes as you'd like. Feel free to also place the client component on any node. Remember to not place a worker on the same node as a coordinator.
 
 .. _configuring-presto-label:
 
@@ -124,7 +84,7 @@ Change the Presto configuration after installation by selecting the Presto servi
 
 If you are running a version of Ambari that is older than 2.1 (version less than 2.1), then you must omit the memory suffix (GB) when setting the following memory related configurations: ``query.max-memory-per-node`` and ``query.max-memory``. For these two properties the memory suffix is automatically added by the integration software. For all other memory related configurations that you add as custom properties, you'll have to include the memory suffix when specifying the value.
 
-Adding and Removing Connectors
+Adding and removing connectors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To add a connector modify the ``connectors.to.add`` property, whose format is the following: ``{'connector1': ['key1=value1', 'key2=value2', etc.], 'connector2': ['key3=value3', 'key4=value4'], etc.}``. Note the single quotes around each individual element. This property only adds connectors and will not delete connectors. Thus, if you add connector1, save the configuration, restart Presto, then specify {} for this property, connector1 will not be deleted. If you specify incorrect values in your connector settings, for example setting the ``hive.metastore.uri`` in the Hive connector to point to an invalid hostname, then Presto will fail to start.
@@ -142,7 +102,7 @@ To delete a connector modify the ``connectors.to.delete`` property, whose format
 
 For example, to delete the Hive and Kafka connectors, set the ``connectors.to.delete`` property to: ``['hive', 'kafka']``.
 
-Known Issues
+Known issues
 ============
 
 * For some older versions of Presto, when attempting to ``CREATE TABLE`` or ``CREATE TABLE AS`` using the Hive connector, you may run into the following error:
