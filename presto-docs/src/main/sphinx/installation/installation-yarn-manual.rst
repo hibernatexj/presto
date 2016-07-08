@@ -17,6 +17,8 @@ and the configuration files and properties it uses.
   All example files referred to are from:
   https://github.com/prestodb/presto-yarn/
 
+-----
+
 Pre-Requisites
 --------------
 
@@ -36,6 +38,8 @@ Pre-Requisites
   - links section updates
   - added note where example files are stored
 
+-----
+
 Presto Installation Directory Structure
 ---------------------------------------
 
@@ -43,8 +47,9 @@ When you use Slider to install Presto on a YARN-based cluster, the Presto
 installation directory structure differs from the standard structure.
 
 For more information, see:
-
 | :doc:`Presto Installation Directory Structure for YARN-Based Clusters <installation-yarn-directory-structure>`
+
+-----
 
 Presto Installation Configuration Options
 -----------------------------------------
@@ -52,9 +57,9 @@ Presto Installation Configuration Options
 Before installation, you must configure the .json files required for running Presto.
 
 For more information, see:
-
 | :doc:`Presto Configuration Options for YARN-Based Clusters <installation/installation-yarn-configuration-options>`
 
+-----
 
 Using Apache Slider to Manually Install Presto on a YARN-Based Cluster
 ======================================================================
@@ -123,6 +128,8 @@ ResourceManager webUI.If your application is successfully run, it should continu
 YARN resource manager as a "RUNNING" application. If the job fails, please be sure to check the job history's logs 
 along with the logs on the node's disk (more information `here <#debugging-and-logging>`__).
 
+-----
+
 Additional Slider Commands
 --------------------------
 
@@ -139,7 +146,7 @@ following, and you will have status printed to a file ``status_file``
 
     bin/slider status presto1 --out status_file
 
-Destroy the app and re-create
+Destroy the App and Re-create
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you want to re-create the app due to some failures or you want to
@@ -187,6 +194,8 @@ the total number of WORKERS to be 2, then run:
 Please note that if your cluster already had 3 WORKER nodes running, the
 above command will destroy one of them and retain 2 WORKERs.
 
+-----
+
 Advanced Configuration Options
 ------------------------------
 
@@ -197,15 +206,17 @@ The following advanced configuration options are available:
 + YARN label
 
 For more information, see:
-
 | :doc:`Advanced Configuration Options for YARN-Based Clusters <installation-yarn-configuration-options-advanced>`
+
+-----
 
 Debugging and Logging
 =====================
 
 For more information, see:
-
 | :doc:`Debugging and Loggin for YARN-Based Clusters <installation-yarn-debugging-logging>`
+
+-----
 
 Links
 =====

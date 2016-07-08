@@ -1,5 +1,5 @@
 =================================================================
-Presto Server Installation for a Cluster (Presto Admin and RPMs)
+Presto Server Installation on a Cluster (Presto Admin and RPMs)
 =================================================================
 
 You can use Presto Admin and RPMs to install and deploy Presto on a 
@@ -21,24 +21,24 @@ System Requirements
   + YARN-based cluster: CDH 5.4 or HDP 2.2; both require Hadoop 2.6
   + Python 2.6 or 2.7
 
-Manual Installation for a Cluster
+Manual Installation on a Cluster
 *********************************
 
 Install and manage Presto manually using Presto Admin.
 
+| Download Presto from https://www.teradata.com/presto
 | :doc:`Installation Procedures <installation/installation-presto-admin>`
-| Download **presto_server_pkg.141t.tar.gz** from :download:`teradata-presto`
 
 ----
 
-Manual Installation for a YARN-Based Cluster
+Manual Installation on a YARN-Based Cluster
 ********************************************
 
 Install and manage Presto integrated with YARN manually using `Apache Slider`_.
 
-| :doc:`Installation Procedures <installation/installation-yarn-manual>`
-| Download the YARN Presto package included in **presto_server_pkg.141t.tar.gz** from :download:`teradata-presto`
+| Download Presto from https://www.teradata.com/presto
 | Download :download:`apache-slider`
+| :doc:`Installation Procedures <installation/installation-yarn-manual>`
 
   .. _Apache Slider: https://slider.incubator.apache.org/
 

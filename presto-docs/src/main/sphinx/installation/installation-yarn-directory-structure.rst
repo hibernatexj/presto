@@ -1,6 +1,6 @@
-﻿===============================================================
-Presto Installation Directory Structure for YARN-Based Clusters
-===============================================================
+﻿==============================================================
+Presto Installation Directory Structure on YARN-Based Clusters
+==============================================================
 
 If you use Slider scripts or use Ambari slider view to set up Presto on
 YARN, Presto is going to be installed using the Presto server tarball
