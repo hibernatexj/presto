@@ -32,6 +32,7 @@ import java.util.List;
 
 import static com.facebook.presto.tests.TestGroups.CLI;
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.io.Resources.getResource;
 import static com.google.common.io.Resources.readLines;
 import static com.teradata.tempto.fulfillment.table.hive.tpch.TpchTableDefinitions.NATION;
@@ -41,6 +42,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.testng.Assert.assertEquals;
 
 public class PrestoCliTests
         extends ProductTest
@@ -48,6 +50,7 @@ public class PrestoCliTests
 {
     private static final long TIMEOUT = 300 * 1000; // 30 secs per test
     private static final String EXIT_COMMAND = "exit";
+    private static final String NO_ERROR = "LDAP Success test";
 
     private final List<String> nationTableInteractiveLines;
     private final List<String> nationTableBatchLines;
@@ -146,23 +149,23 @@ public class PrestoCliTests
         assertThat(presto.readRemainingOutputLines()).containsExactly("Presto CLI " + version);
     }
 
-    @Test(groups = CLI, timeOut = TIMEOUT)
-    public void shouldRunQuery()
-            throws IOException, InterruptedException
-    {
-        launchPrestoCliWithServerArgument();
-        setLdapPassword();
-        presto.waitForPrompt();
-        presto.getProcessInput().println("select * from hive.default.nation;");
-        assertThat(trimLines(presto.readLinesUntilPrompt())).containsAll(nationTableInteractiveLines);
-    }
+//    @Test(groups = CLI, timeOut = TIMEOUT)
+//    public void shouldRunQuery()
+//            throws IOException, InterruptedException
+//    {
+//        launchPrestoCliWithServerArgument();
+//        checkLdapAuthentication();
+//        presto.waitForPrompt();
+//        presto.getProcessInput().println("select * from hive.default.nation;");
+//        assertThat(trimLines(presto.readLinesUntilPrompt())).containsAll(nationTableInteractiveLines);
+//    }
 
     @Test(groups = CLI, timeOut = TIMEOUT)
     public void shouldRunBatchQuery()
             throws IOException, InterruptedException
     {
         launchPrestoCliWithServerArgument("--execute", "select * from hive.default.nation;");
-        setLdapPassword();
+        checkLdapAuthentication();
         assertThat(trimLines(presto.readRemainingOutputLines())).containsAll(nationTableBatchLines);
     }
 
@@ -171,7 +174,7 @@ public class PrestoCliTests
             throws IOException, InterruptedException
     {
         launchPrestoCliWithServerArgument("--catalog", "hive", "--schema", "default", "--execute", "select * from nation;");
-        setLdapPassword();
+        checkLdapAuthentication();
         assertThat(trimLines(presto.readRemainingOutputLines())).containsAll(nationTableBatchLines);
     }
 
@@ -184,8 +187,18 @@ public class PrestoCliTests
         Files.write("select * from hive.default.nation;\n", temporayFile, UTF_8);
 
         launchPrestoCliWithServerArgument("--file", temporayFile.getAbsolutePath());
-        setLdapPassword();
+        checkLdapAuthentication();
         assertThat(trimLines(presto.readRemainingOutputLines())).containsAll(nationTableBatchLines);
+    }
+
+    @Test(groups = CLI, timeOut = TIMEOUT)
+    public void testInvalidUserPassword()
+            throws IOException, InterruptedException
+    {
+        launchPrestoCliWithServerArgument();
+        String invalidUserPassword = ldapUserPassword.substring(2);
+        checkLdapAuthentication(invalidUserPassword, "AcceptSecurityContext");
+        assertThat(trimLines(presto.readLinesUntilPrompt())).containsAll(nationTableInteractiveLines);
     }
 
     private void launchPrestoCliWithServerArgument(String... arguments)
@@ -250,12 +263,31 @@ public class PrestoCliTests
         presto = new PrestoCliProcess(defaultJavaProcessLauncher().launch(Presto.class, arguments));
     }
 
-    private void setLdapPassword()
+    private void checkLdapAuthentication(String ldapUserPassword)
     {
         if (ldapAuthentication) {
-            presto.waitForLdapPasswordPrompt();
-            presto.getProcessInput().println(ldapUserPassword);
-            presto.nextOutputToken();
+            setLdapPassword(ldapUserPassword);
+            List<String> errorOutput = presto.readRemainingErrorLines();
+            checkState(!errorOutput.isEmpty(), "Exception during LDAP Authentication", errorOutput);
         }
+    }
+
+    private void checkLdapAuthentication()
+    {
+        checkLdapAuthentication(ldapUserPassword);
+    }
+
+    private void checkLdapAuthentication(String ldapUserPassword, String expectedErrorMessage)
+    {
+        if (ldapAuthentication) {
+            setLdapPassword(ldapUserPassword);
+            assertEquals(presto.readRemainingErrorLines().stream().anyMatch(str -> str.contains(expectedErrorMessage)), true);
+        }
+    }
+
+    private void setLdapPassword(String ldapUserPassword)
+    {
+        presto.waitForLdapPasswordPrompt();
+        presto.getProcessInput().println(ldapUserPassword);
     }
 }
